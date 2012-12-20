@@ -62,6 +62,14 @@ class NoHeart{
 		int getPrior() const{
 		   return m_prior;
 	   	}
+
+		int getType(Type t){
+			if(t == T_PRIOR){
+				return m_prior;
+			}else{
+				return m_ageLevel;
+			}
+		}
 }
 
 
@@ -71,6 +79,7 @@ class NHTree{
 		int m_dead, m_pos, m_neg;
 		vector<NHTree> m_list;
 		vector<NHTree*> m_leaf;
+		vector<Type> m_attr;
 		Type m_type;
 		int m_id;
 
@@ -78,8 +87,15 @@ class NHTree{
 		NHTree(){
 			m_dead = 0;
 			m_type = T_ROOT;
+			m_attr.push_back(T_AGE);
+			m_attr.push_back(T_PRIOR);
 		}
 
+		NHTree(vector<Type> & attr){
+			m_dead = 0;
+			m_attr = attr;
+		}
+		
 		int getDead(){
 			return m_dead;
 		}
@@ -101,83 +117,86 @@ class NHTree{
 			}
 		}
 
-		//Build Tree
-		void build_root(){ 
-			vector<int> tested;
-			vector<NoHeart> :: iterator it ;
-			int age;
-			double age_ig = 1.0;
-			for (it = m_list.begin();it!= m_list.end() ; it++) {
-				int age = (*it).getAgeLevel();
-				if (find(tested.begin(), tested.end(), age)==tested.end()) {
-				   	tested.push_back(age);
-					age_ig -= get_age_ig(age);
-				}
-       		}
-			//now compute prior, if there is any
-			double p_ig = 1.0;
-			for(int p = 0;p<=1;p+=1){
-				p_ig -= get_prior_ig(p);
-			}
-
+		void build(){
+			vector<Type> :: iterator it ;
+			
+			double max_ig = -1;
 			if(m_pos > m_neg){
 				m_dead = 1;
 			}else{
 				m_dead = 0;
-			}			
+			}	
 
-			if(p_ig > age_ig){
-				m_type = T_PRIOR;
-				build_child(T_AGE);
-			}else{
-				m_type = T_AGE;
-				build_child(T_PRIOR);
-			}
-			
-			
-			//	NHTree * child = new NHTree();
-			
-		}
-
-		void build_child(Type t){
-			//build 
-			NHTree * child = new NHTree(t);
-			
-			child.setType(T_LEAF);
-			m_child.push_back(child);
-			
-		}
-
-		double get_age_ig(int age){
-			vector<NoHeart> :: iterator it;
-			int pos = 0;
-			int neg = 0;
-			for (it = m_list.begin();it!= m_list.end() ; it++){
-				if(age = (*it).getAgeLevel()){
-					if((*it).getDead() == 1){
-						pos += 1;
-					}else{
-						neg += 1;
-					}
+			for(it = m_attr.begin();it!= m_attr.end() ; it++){
+				double ig = calc_ig(*it);
+				if(ig > max_ig){
+					m_type = (*it);
 				}
 			}
-			return calc_entropy((double)pos,(double)neg);
-		}
+			
+			//If condition for non-attribute left
+			if(m_attr.size()<=1){
+				m_type = T_LEAF;
+				return ;
+			}
 
-		double get_prior_ig(int p){
-			vector<NoHeart> :: iterator it;
-			int pos = 0;
-			int neg = 0;
-			for (it = m_list.begin();it!= m_list.end() ; it++){
-				if(p = (*it).getPrior()){
-					if((*it).getDead() == 1){
-						pos += 1;
-					}else{
-						neg += 1;
-					}
+			//Get the remaining attribute
+			vector<Type> c_attr;
+			for(it = m_attr.begin();it!= m_attr.end() ; it++){
+				if((*it) != t_type){
+					c_attr.push_back(*it);
 				}
 			}
-			return calc_entropy((double)pos,(double)neg);
+			
+			//Find the id of children list
+			vector<NoHeart> :: iterator n_it;
+			for (n_it = m_list.begin();n_it!= m_list.end() ; n_it++){
+				vector<NHTree> :: iterator l_it;
+				bool is_find = false
+				for(l_it =m_leaf.begin();l_it != m_leaf.end();l_it++){
+					if(l_it.getId() == n_it.getType(m_Type)){
+						l_it.add_nh(*n_it);
+						is_find = true;
+					}
+				}
+				if (!is_find) {
+						NHTree *t = new NHTree(c_attr);
+						t.add_nh(*n_it);
+						m_leaf.push_back(t);
+				}
+			}
+			
+			//Now the child will iterate themselves
+			vector<NHTree> :: iterator l_it;
+			for(l_it =m_leaf.begin();l_it != m_leaf.end();l_it++){
+				(*l_it)->build();
+			}
+		}
+		
+		double calc_ig(Type t){
+			vector<int> tested;			
+			vector<NoHeart> :: iterator n_it;
+			double ig = 0.0;
+			for (n_it = m_list.begin();n_it!= m_list.end() ; n_it++){
+				int data = (*n_it).getType(t);
+				if (find(tested.begin(), tested.end(), data)==tested.end()) {
+				   	tested.push_back(data);
+					vector<NoHeart> :: iterator it;
+					int pos = 0;
+					int neg = 0;
+					for (it = m_list.begin();it!= m_list.end() ; it++){	
+						if(data  = (*it).getType(t)){
+							if((*it).getDead() == 1){
+								pos += 1;
+							}else{
+								neg += 1;
+							}
+						}
+					}
+					ig -= calc_entropy((double)pos,(double)neg);
+				}
+			}
+			return ig;
 		}
 
 		//Testing
@@ -262,5 +281,86 @@ int main(){
     return 0;        
 }
 
+/*
+		//Build Tree
+		void build_root(){ 
+			vector<int> tested;
+			vector<NoHeart> :: iterator it ;
+			for(all type in the vector){
+				//calculate the type ig
+				//if larger then current maximum, then set to that
 
+			}
+
+			int age;
+			double age_ig = 1.0;
+			for (it = m_list.begin();it!= m_list.end() ; it++) {
+				int age = (*it).getAgeLevel();
+				if (find(tested.begin(), tested.end(), age)==tested.end()) {
+				   	tested.push_back(age);
+					age_ig -= get_age_ig(age);
+				}
+       		}
+			//now compute prior, if there is any
+			double p_ig = 1.0;
+			for(int p = 0;p<=1;p+=1){
+				p_ig -= get_prior_ig(p);
+			}
+
+			if(m_pos > m_neg){
+				m_dead = 1;
+			}else{
+				m_dead = 0;
+			}			
+
+			if(p_ig > age_ig){
+				m_type = T_PRIOR;
+				build_child(T_AGE);
+			}else{
+				m_type = T_AGE;
+				build_child(T_PRIOR);
+			}
+			
+		}
+
+		void build_child(Type t){
+			//build 
+			NHTree * child = new NHTree(t);
+			child.setType(T_LEAF);
+			m_child.push_back(child);
+
+			
+		}
+
+		double get_age_ig(int age){
+			vector<NoHeart> :: iterator it;
+			int pos = 0;
+			int neg = 0;
+			for (it = m_list.begin();it!= m_list.end() ; it++){
+				if(age = (*it).getAgeLevel()){
+					if((*it).getDead() == 1){
+						pos += 1;
+					}else{
+						neg += 1;
+					}
+				}
+			}
+			return calc_entropy((double)pos,(double)neg);
+		}
+
+		double get_prior_ig(int p){
+			vector<NoHeart> :: iterator it;
+			int pos = 0;
+			int neg = 0;
+			for (it = m_list.begin();it!= m_list.end() ; it++){
+				if(p = (*it).getPrior()){
+					if((*it).getDead() == 1){
+						pos += 1;
+					}else{
+						neg += 1;
+					}
+				}
+			}
+			return calc_entropy((double)pos,(double)neg);
+		}*/
 
