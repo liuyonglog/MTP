@@ -8,6 +8,8 @@
 using namespace std;
 
 const double LOG_2 = log10(2);
+int al = 10;
+double sl = 0.5;
 
 enum Type{
 	T_ROOT = 0,
@@ -47,13 +49,13 @@ class Heart{
 		int m_scoreLevel;
 	public:
 		Heart( int age = 10, int prior = 0,int alle = 0, int anti = 0, double score = 0.5, int dead = 0){
-			m_ageLevel = age/10;
+			m_ageLevel = age/al;
 			m_prior = prior;
 			m_alle = alle;
 			m_anti = anti;
-			m_scoreLevel = (score)/0.5;
+			m_scoreLevel = (score)/sl;
 			m_dead = dead;
-			cout<<m_scoreLevel<<endl;
+			//cout<<m_scoreLevel<<endl;
 		}
 
 		Heart(const Heart &p ){
@@ -165,7 +167,7 @@ class HTree{
 			}
 			cout<<m_pos<<" "<<m_neg<<" "<<m_dead<<endl;
 			
-			double max_ig = -1;
+			double max_ig = -1.0;
 			vector<Type> :: iterator it ;
 			for(it = m_attr.begin();it!= m_attr.end() ; it++){
 				double ig = calc_ig(*it);
@@ -176,6 +178,9 @@ class HTree{
 			
 			//If condition for only one attribute left
 			if(m_attr.size()<=1){
+				m_type = T_LEAF;
+				return ;
+			}else if(m_pos == 0 || m_neg == 0){
 				m_type = T_LEAF;
 				return ;
 			}
@@ -216,7 +221,7 @@ class HTree{
 		double calc_ig(Type t){
 			vector<int> tested;			
 			vector<Heart> :: iterator n_it;
-			double ig = 0.0;
+			double ig = 1.0;
 			for (n_it = m_list.begin();n_it!= m_list.end() ; n_it++){
 				int data = (*n_it).getType(t);
 				if (find(tested.begin(), tested.end(), data)==tested.end()) {
@@ -225,7 +230,7 @@ class HTree{
 					int pos = 0;
 					int neg = 0;
 					for (it = m_list.begin();it!= m_list.end() ; it++){	
-						if(data  = (*it).getType(t)){
+						if(data  == (*it).getType(t)){
 							if((*it).getDead() == 1){
 								pos += 1;
 							}else{
@@ -233,7 +238,7 @@ class HTree{
 							}
 						}
 					}
-					ig -= calc_entropy((double)pos,(double)neg);
+					ig = ig - (double)(pos+neg)/(double)(m_pos+m_neg) *calc_entropy((double)pos,(double)neg);
 				}
 			}
 			return ig;
@@ -278,6 +283,8 @@ int main(){
 	ifstream trainH("HTrainSet.txt");
 	ifstream testH("HTestSet.txt");
 	HTree *h_dtl = new HTree();
+	
+	/
 	if (trainH.is_open()) {
 		int age, prior,anti, alle,dead;
 		double score;
@@ -290,7 +297,7 @@ int main(){
 	}
 
 	h_dtl->build();
-	cout<<"Accuracy for training data"<< h_dtl->train_accuracy() <<endl;   
+	cout<<"Accuracy for training data"<<h_dtl->train_accuracy() <<endl;   
 	
 	//calculate based on entropy
 	int h_count = 0;
@@ -309,7 +316,8 @@ int main(){
 		}
 	   	testH.close();
 	}
-	cout<<"Accuracy for testing data"<<(double)h_correct/(double)h_count <<endl;
+
+	cout<<"Accuracy for testing data"<<(double)h_correct/(double)h_count<<endl;
   
     return 0;        
 }

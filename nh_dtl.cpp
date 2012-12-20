@@ -40,7 +40,7 @@ class NoHeart{
 
 	public:
 		NoHeart( int age = 10, int prior = 0, int dead = 0 ){
-			m_ageLevel = age/10;
+			m_ageLevel = age/1;
 			m_prior = prior;
 			m_dead = dead;
 		}
@@ -129,15 +129,16 @@ class NHTree{
 				m_dead = 0;
 			}
 			cout<<m_pos<<" "<<m_neg<<" "<<m_dead<<endl;
-			double max_ig = -1;
+			double max_ig = 0;
 			vector<Type> :: iterator it ;
 			for(it = m_attr.begin();it!= m_attr.end() ; it++){
 				double ig = calc_ig(*it);
+				cout<<ig<<endl;
 				if(ig > max_ig){
 					m_type = (*it);
 				}
 			}
-			
+			//return ;
 			//If condition for only one attribute left
 			if(m_attr.size()<=1){
 				m_type = T_LEAF;
@@ -180,16 +181,18 @@ class NHTree{
 		double calc_ig(Type t){
 			vector<int> tested;			
 			vector<NoHeart> :: iterator n_it;
-			double ig = 0.0;
+			double ig = 1.0;
 			for (n_it = m_list.begin();n_it!= m_list.end() ; n_it++){
 				int data = (*n_it).getType(t);
+				
 				if (find(tested.begin(), tested.end(), data)==tested.end()) {
+					//cout<<data<<endl;
 				   	tested.push_back(data);
 					vector<NoHeart> :: iterator it;
 					int pos = 0;
 					int neg = 0;
 					for (it = m_list.begin();it!= m_list.end() ; it++){	
-						if(data  = (*it).getType(t)){
+						if(data  == (*it).getType(t)){
 							if((*it).getDead() == 1){
 								pos += 1;
 							}else{
@@ -197,7 +200,9 @@ class NHTree{
 							}
 						}
 					}
-					ig -= calc_entropy((double)pos,(double)neg);
+					
+					ig = ig - (double)(pos+neg)/(double)(m_pos+m_neg) *calc_entropy((double)pos,(double)neg);
+					//cout<<ig<<endl;
 				}
 			}
 			return ig;
@@ -232,9 +237,6 @@ class NHTree{
 			return (root->getDead() == p.getDead());
 		}
 
-		bool is_empty(){
-			return m_leaf.empty();
-		}
 };
 
 
