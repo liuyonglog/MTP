@@ -3,12 +3,19 @@
 #include <fstream>
 #include <vector>
 #include <math.h>
-#include <queue>
 #include <algorithm>
 
 using namespace std;
 
-double LOG_2 = log10(2);
+const double LOG_2 = log10(2);
+
+enum Type{
+	T_ROOT = 0,
+	T_AGE,
+	T_PRIOR,
+	T_LEAF
+};
+
 
 //Calculate entropy for any pos and neg becasreful about log 0 will cause nan
 double calc_entropy(double pos,double neg){
@@ -64,15 +71,39 @@ class NHTree{
 		int m_dead, m_pos, m_neg;
 		vector<NHTree> m_list;
 		vector<NHTree*> m_leaf;
-		type = root??
+		//vector<Type> xxx?
+		Type m_type;
+		int m_id;
 
 	public:
 		NHTree(){
 			m_dead = 0;
+			m_type = T_ROOT;
+		}
+
+		int getDead(){
+			return m_dead;
+		}
+
+		int getId(){
+			return m_id;
 		}
 		
-		double get_max_ig(){ //based on ageLevel or prior
-			//first get all the age
+		Type getType(){
+			return m_type;
+		}
+
+		void add_nh(NoHeart &p){
+			m_list.push_back(p);
+			if(p.getDead()== 1){
+				m_pos += 1;
+			}else{
+				m_neg += 1;
+			}
+		}
+
+		//Build Tree
+		void build_root(){ 
 			vector<int> tested;
 			vector<NoHeart> :: iterator it ;
 			int age;
@@ -97,10 +128,22 @@ class NHTree{
 			}			
 
 			if(p_ig > age_ig){
-				tyep = prior
+				m_type = T_PRIOR;
+				build_child(T_AGE);
 			}else{
-				type = age;
-			}			
+				m_type = T_AGE;
+				build_child(T_PRIOR);
+			}
+			
+		}
+
+		void build_child(Type t){
+			//build 
+			NHTree * child = new NHTree(t);
+			child.setType(T_LEAF);
+			m_child.push_back(child);
+
+			
 		}
 
 		double get_age_ig(int age){
@@ -135,15 +178,7 @@ class NHTree{
 			return calc_entropy((double)pos,(double)neg);
 		}
 
-		void add_nh(NoHeart &p){
-			m_list.push_back(p);
-			if(p.getDead()== 1){
-				m_pos += 1;
-			}else{
-				m_neg += 1;
-			}
-		}
-
+		//Testing
 		double train_accuracy(){
 			vector<NoHeart> :: iterator it ;
 			int correct = 0;
@@ -155,20 +190,33 @@ class NHTree{
 			return (double)correct/(double)(m_pos+m_neg);
 		}
 
-//TODO: test
+		
 		bool test(NoHeart &p){
-			while( root != null){
-				//check type
-				if(has children){
-					root.get_type() == ???
-					for(){
-						if(children type matches)
-							//then check
-							root = child
+			NHTree * root = this;
+			while(!root.get_type()!= T_LEAF){
+				Type t = root.get_type();
+				vector<NHTree> :: iterator it ;
+				for (it = m_leaf.begin();it!= m_leaf.end();it++){
+					if(t == T_AGE){
+						root = it;
+						break;
 					}
 				}
 			}
-			return (root.dead() == p.getDead());
+			return (root.getDead() == p.getDead());
+		}
+
+		
+		bool type_match(Type t,NoHeart &p, NHTree *c){
+			if(c->get_type() == T_AGE){
+				return (c->getId() == p.getAgeLevel());
+			}else{ //prior
+				return (c->getId() == p.getPrior());
+			}
+		}
+
+		bool is_empty(){
+			return m_leaf.empty();
 		}
 };
 
@@ -177,23 +225,24 @@ class NHTree{
 
 int main(){
 
-	ifstream trainNH("???.txt");
-	ifstream testNH("???.txt");
-	NHTree nh_dtl = new NHTree();
+	ifstream trainNH("NHTrainSet.txt");
+	ifstream testNH("NHTestSet.txt");
+	NHTree *nh_dtl = new NHTree();
 	if (trainNH.is_open()) {
 		int age, prior, dead;
 		while (trainLabel.good()) {
 		   	trainLabel >> age >> prior >> dead;
 			NoHeart p(age,prior,dead);
-			nh_dtl.add_nh(p);
+			nh_dtl->add_nh(p);
 		}
 	   	trainNH.close();
 	}
-	cout<<"Accuracy for training data"<<  <<endl;   
+	cout<<"Accuracy for training data"<< nh_dtl->train_accuracy() <<endl;   
 	
 	//calculate based on entropy
 	int nh_count = 0;
 	int nh_correct = 0;
+
 	if(testNH.is_good()){
 		int age, prior, dead;
 		while (trainLabel.good()) {
@@ -207,9 +256,7 @@ int main(){
 	   	trainNH.close();
 	}
 	cout<<"Accuracy for testing data"<<(double)nh_correct/(double)nh_count <<endl;
-  	
-	
-   
+  
     return 0;        
 }
 
